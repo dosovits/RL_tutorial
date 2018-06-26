@@ -10,7 +10,7 @@ t0 = time.time()
 
 # Set learning parameters
 # TODO
-lr = 0. # TODO
+lr = 0. # TODO select an appropriate learning rate (hint: might be higher than you are used to)
 
 gamma = 0.95
 max_steps_per_episode = 99
@@ -28,12 +28,12 @@ for episode in range(num_episodes):
     for step in range(max_steps_per_episode):
         # Choose an action by greedily (with noise) picking from the Q table
         # TODO
-        act = env.action_space.sample() # TODO
+        act = env.action_space.sample() # TODO One suggestion: add randn/(1+episode) to the Q-values
         # Get new state and reward from environment
         obs_new, reward, terminal, _ = env.step(act)
         # Update Q-Table with new knowledge
         # TODO
-        Q[obs,act] = 0. # TODO
+        Q[obs,act] = 0. # TODO Use the Bellman-equation-based update here
         cumulative_reward += reward
         obs = obs_new
         if terminal == True:
@@ -49,8 +49,8 @@ print("Smoothed training reward", np.mean(np.reshape(np.array(returns_list), [-1
 
 print('Evaluating the learned policy')
 def policy(obs):
-    return np.argmax(Q[obs,:])
-    # return env.action_space.sample() # TODO use this to evaluate the random policy
+    # TODO
+    return env.action_space.sample() # TODO This is the random policy. Replace it by the greedy policy according to the Q-table
 avg_test_return = util.eval.eval_agent(policy, env, num_episodes=10000, max_steps_per_episode=100)
 print("Avg eval return: ",  avg_test_return)
 
