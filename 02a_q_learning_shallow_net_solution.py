@@ -10,87 +10,76 @@ import torch.optim as optim
 
 import util.eval
 
-class DeepNet(nn.Module):
+
+class ShallowNet(nn.Module):
     def __init__(self, n_input, lr):
-        super(DeepNet, self).__init__()
+        super(ShallowNet, self).__init__()
         self.n_input = n_input
         self.lr = lr
-        self.fc_h1 = nn.Linear(n_input, 16, bias=False)
-        torch.nn.init.uniform_(self.fc_h1.weight, 0., 0.) # TODO
-        self.fc_out = nn.Linear(16, 4, bias=False)
-        torch.nn.init.uniform_(self.fc_out.weight, 0., 0.) # TODO
+        self.fc_out = nn.Linear(n_input, 4, bias=False)
+        torch.nn.init.uniform_(self.fc_out.weight, 0.0, 0.0) # This is the same as in the tabular case, works well with noisy-Q exploration
+        # torch.nn.init.uniform_(self.fc_out.weight, 0.0, 0.01) # This works for epsilon-greedy exploration
         self.optimizer = optim.SGD(self.parameters(), lr=lr)
 
     def forward(self, x):
-        x = F.relu(self.fc_h1(x))
         x = self.fc_out(x)
         return x
 
 def int_to_onehot(x, dim):
     x_onehot = torch.zeros([1, dim])
     x_onehot[0,x] = 1.
-    return x_onehot
+    return x_onehot #+ torch.randn([1, dim])*0.05
 
 
 env = gym.make('FrozenLake-v0')
 # env = gym.make('FrozenLake8x8-v0')
 t0 = time.time()
 
-# TODO Set learning parameters
-lr = 0. # TODO
-
-gamma = 0.95
-eps_schedule = lambda x: 500./(float(x)+2000.)
+# Set learning parameters
+lr = .4
+gamma = .95
+eps_schedule = lambda x: 50./(float(x)+500.)
 max_steps_per_episode = 99
-num_episodes = 10000
-net = DeepNet(env.observation_space.n, lr)
+num_episodes = 2000
 returns_list = []
+net = ShallowNet(env.observation_space.n, lr)
 for episode in range(num_episodes):
     #Reset environment and get first new observation
     obs = env.reset()
     cumulative_reward = 0
     terminal = False
-    terminate_episode = False
     # Q-learning with function approximation
-    for step in range(max_steps_per_episode):
+    for step in range (max_steps_per_episode):
         # convert the action to a form the network can process
         obs_onehot = int_to_onehot(obs, env.observation_space.n)
         pred = net(obs_onehot)
 
         # Action selection with exploration using added noise
-        # act = np.argmax(pred.detach().numpy() + np.random.randn(1,env.action_space.n)*(1./(episode+1)))
+        act = np.argmax(pred.detach().numpy() + np.random.randn(1,env.action_space.n)*(1./(episode+1)))
         # ALTERNATIVE: epsilon-greedy exploration
-        if np.random.rand() < eps_schedule(episode):
-            act = env.action_space.sample()
-        else:
-            act = np.argmax(pred.detach().numpy())
+        # if np.random.rand() < eps_schedule(episode):
+        #     act = env.action_space.sample()
+        # else:
+        #     act = np.argmax(pred.detach().numpy())
 
-        # Preparing the target depends on the step being terminal or not
-        if not terminal:
-            # Get new observation and reward from the environment
-            obs_new, reward, terminal,_ = env.step(act)
-            # Process the new observation with the net
-            obs_new_onehot = int_to_onehot(obs_new, env.observation_space.n)
-            pred_new = net(obs_new_onehot).detach()
+        # Get new observation and reward from the environment
+        obs_new, reward, terminal,_ = env.step(act)
+        # Process the new observation with the net
+        obs_new_onehot = int_to_onehot(obs_new, env.observation_space.n)
+        pred_new = net(obs_new_onehot).detach()
 
-            # Prepare the target for the Q-function update
-            max_q_new = torch.max(pred_new, dim=1)[0]
-            target = reward + gamma*max_q_new
-
-            # update the cumulative reward, prepare the observation for the next step
-            cumulative_reward += reward
-            obs = obs_new
-        else:
-            target=0.
-            terminate_episode = True
-
+        # Update the Q-function
         predicted = pred[:,act]
+        max_q_new = torch.max(pred_new, dim=1)[0]
+        target = reward + gamma*max_q_new
         loss = (predicted - target).pow(2).sum()
         net.optimizer.zero_grad()
         loss.backward()
         net.optimizer.step()
 
-        if terminate_episode:
+        cumulative_reward += reward
+        obs = obs_new
+        if terminal == True:
             break
 
     if time.time() - t0 > 1:
