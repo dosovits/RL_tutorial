@@ -16,15 +16,16 @@ class DeepNet(nn.Module):
         self.n_input = n_input
         self.lr = lr
         self.fc_h1 = nn.Linear(n_input, 16, bias=False)
-        torch.nn.init.uniform_(self.fc_h1.weight, 0., 0.) # TODO
+        torch.nn.init.uniform_(self.fc_h1.weight, 0., 0.1)
         self.fc_out = nn.Linear(16, 4, bias=False)
-        torch.nn.init.uniform_(self.fc_out.weight, 0., 0.) # TODO
+        torch.nn.init.uniform_(self.fc_out.weight, 0., 0.01)
         self.optimizer = optim.SGD(self.parameters(), lr=lr)
 
     def forward(self, x):
         x = F.relu(self.fc_h1(x))
         x = self.fc_out(x)
         return x
+
 
 def int_to_onehot(x, dim):
     x_onehot = torch.zeros([1, dim])
@@ -36,10 +37,9 @@ env = gym.make('FrozenLake-v0')
 # env = gym.make('FrozenLake8x8-v0')
 t0 = time.time()
 
-# TODO Set learning parameters
-lr = 0.0 # TODO
-
-gamma = 0.95
+# Set learning parameters
+lr = .2
+gamma = .95
 eps_schedule = lambda x: 500./(float(x)+2000.)
 max_steps_per_episode = 99
 num_episodes = 10000
