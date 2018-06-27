@@ -58,16 +58,16 @@ for episode in range(num_episodes):
         pred = net(obs_onehot)
 
         # TODO
-        act = env.action_space.sample() # TODO Replace by appropriate action selection with exploration. As before or epsilon-greedy
+        act = env.action_space.sample() # TODO Replace by appropriate action selection with exploration. As before should be fine.
 
         # Get new observation and reward from the environment
         obs_new, reward, terminal,_ = env.step(act)
         # TODO 
-        pred_new = torch.zeros((1,4)) # TODO Process the new observation with the net (this is easy)
+        pred_new = torch.zeros((1,4)) # TODO Process the new observation with the net (same as above)
 
         # TODO Update the Q-function
-        predicted = pred[0,0] # TODO This is the key point
-        target = torch.zeros((1,4)) # TODO This is the key point
+        predicted = pred[0,0] # TODO This is the key point. Set to the current prediction
+        target = torch.zeros((1,4)) # TODO This is the key point. Set to what Bellman equation suggest. Remember to stop gradients with .detach()
         loss = (predicted - target).pow(2).sum()
         net.optimizer.zero_grad()
         loss.backward()
