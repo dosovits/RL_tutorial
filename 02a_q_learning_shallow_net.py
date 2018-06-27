@@ -17,8 +17,7 @@ class ShallowNet(nn.Module):
         self.n_input = n_input
         self.lr = lr
         self.fc_out = nn.Linear(n_input, 4, bias=False)
-        # TODO (potentially)
-        torch.nn.init.uniform_(self.fc_out.weight, 0.0, 0.0) # TODO might try to tune this, but actually also fine this way
+        torch.nn.init.uniform_(self.fc_out.weight, 0.0, 0.0)
         self.optimizer = optim.SGD(self.parameters(), lr=lr)
 
     def forward(self, x):
@@ -39,7 +38,6 @@ t0 = time.time()
 lr = 0. # TODO again, might need to be higher than you are used to. How to set it to be equivalent to the tabular case?
 
 gamma = 0.95
-eps_schedule = lambda x: 50./(float(x)+500.)
 max_steps_per_episode = 99
 num_episodes = 2000
 # Initialize list of per-episode returns
@@ -56,9 +54,8 @@ for episode in range(num_episodes):
         # feed the observation to the network and get a prediction
         obs_onehot = int_to_onehot(obs, env.observation_space.n)
         pred = net(obs_onehot)
-
-        # TODO
-        act = env.action_space.sample() # TODO Replace by appropriate action selection with exploration. As before should be fine.
+        
+        act = np.argmax(pred.detach().numpy() + np.random.randn(1,env.action_space.n)*(1./(episode+1)))
 
         # Get new observation and reward from the environment
         obs_new, reward, terminal,_ = env.step(act)
@@ -88,8 +85,9 @@ print("Smoothed training reward", np.mean(np.reshape(np.array(returns_list), [-1
 
 print('Evaluating the learned policy')
 def policy(obs):
-    # TODO
-    act = env.action_space.sample() # TODO Replace by greedy action selection
+    obs_onehot = int_to_onehot(obs, env.observation_space.n)
+    pred = net(obs_onehot)
+    act = np.argmax(pred.detach().numpy())
     return act
 
 avg_test_return = util.eval.eval_agent(policy, env, num_episodes=10000, max_steps_per_episode=100)
